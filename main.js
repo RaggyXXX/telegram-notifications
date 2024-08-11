@@ -3,6 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const TelegramBot = require("node-telegram-bot-api");
 const bodyParser = require("body-parser");
+const axios = require("axios"); // Import axios for HTTP requests
 
 const app = express();
 const port = process.env.PORT || 3010;
@@ -54,9 +55,8 @@ bot.on("message", (msg) => {
 });
 
 // HTTP-Endpoint für den Empfang von Nachrichten
-app.post("/send-message", (req, res) => {
-  const { message, chatId, addressee } = req.body;
-  console.log(message);
+app.post("/send-message", async (req, res) => {
+  const { message, addressee, imageUrl } = req.body;
 
   if (!message) {
     return res.status(400).send("Message content missing");
@@ -64,12 +64,7 @@ app.post("/send-message", (req, res) => {
 
   let targetChatId;
 
-  if (chatId) {
-    if (!allowedChatIds.includes(chatId.toString())) {
-      return res.status(403).send("Access denied");
-    }
-    targetChatId = chatId;
-  } else if (addressee) {
+  if (addressee) {
     if (addressee === "DOM") {
       targetChatId = domChatId;
     } else if (addressee === "SUB") {
@@ -78,18 +73,29 @@ app.post("/send-message", (req, res) => {
       return res.status(400).send("Invalid addressee");
     }
   } else {
-    return res.status(400).send("Either chat ID or addressee is required");
+    return res.status(400).send("Addressee is required");
   }
 
-  bot
-    .sendMessage(targetChatId, message)
-    .then(() => {
-      res.status(200).send("Message sent");
-    })
-    .catch((error) => {
-      console.error("Error sending message:", error);
-      res.status(500).send("Failed to send message");
-    });
+  try {
+    // If imageUrl is provided, download and send the image
+    if (imageUrl) {
+      const response = await axios.get(imageUrl, {
+        responseType: "arraybuffer",
+      });
+      const imageBuffer = Buffer.from(response.data, "binary");
+
+      await bot.sendPhoto(targetChatId, imageBuffer, {
+        caption: message,
+      });
+    } else {
+      // Send just the message if no imageUrl is provided
+      await bot.sendMessage(targetChatId, message);
+    }
+    res.status(200).send("Message sent");
+  } catch (error) {
+    console.error("Error sending message or image:", error);
+    res.status(500).send("Failed to send message or image");
+  }
 });
 
 // Starte den Server
