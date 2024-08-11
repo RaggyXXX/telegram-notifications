@@ -42,6 +42,7 @@ bot.on("message", (msg) => {
 // HTTP-Endpoint für den Empfang von Nachrichten
 app.post("/send-message", (req, res) => {
   const { message, chatId, addressee } = req.body; // Extrahiere Nachricht, Chat-ID und Adressaten aus dem Anfragekörper
+  console.log(message);
 
   if (!message) {
     return res.status(400).send("Message content missing");
