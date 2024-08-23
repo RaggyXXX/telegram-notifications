@@ -23,7 +23,7 @@ const bot = new TelegramBot(token, { polling: false });
 app.use(bodyParser.json());
 
 // Setze den Webhook
-const url = "https://telegram-service.adaptable.app"; // Ihre Server-URL
+const url = process.env.BASE_URL; // Ihre Server-URL
 bot
   .setWebHook(`${url}/bot${token}`)
   .then(() => {
